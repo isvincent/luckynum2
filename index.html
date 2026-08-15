@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#6857e5" />
+  <title>班級大富翁抽籤系統</title>
+  <style>
+    :root{
+      --ink:#24304a;--muted:#68738a;--paper:#fffdf7;--purple:#6857e5;
+      --purple-dark:#4b3bbf;--pink:#ff6f91;--yellow:#ffd95a;--blue:#57c7ff;
+      --green:#59d69a;--orange:#ff9e57;--shadow:0 14px 36px rgba(45,39,92,.15);
+      --radius:22px;--tile:clamp(64px,7.4vw,98px);
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;min-height:100vh;color:var(--ink);font-family:"Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;background:
+      radial-gradient(circle at 12% 8%,rgba(255,217,90,.38),transparent 24%),
+      radial-gradient(circle at 91% 18%,rgba(87,199,255,.28),transparent 26%),
+      linear-gradient(145deg,#fff9eb 0%,#f1f6ff 55%,#fff2f7 100%);overflow-x:hidden}
+    button,input,textarea{font:inherit}
+    button{cursor:pointer}
+    .app{width:min(1480px,100%);margin:auto;padding:18px clamp(14px,3vw,36px) 42px}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}
+    .brand{display:flex;align-items:center;gap:13px;min-width:0}
+    .brand-icon{display:grid;place-items:center;width:52px;height:52px;border-radius:17px;background:linear-gradient(135deg,var(--purple),#8e7cff);box-shadow:0 10px 22px rgba(104,87,229,.3);font-size:29px;transform:rotate(-4deg)}
+    h1{font-size:clamp(1.35rem,3vw,2rem);line-height:1.15;margin:0;font-weight:900;letter-spacing:.02em}
+    .subtitle{margin:4px 0 0;color:var(--muted);font-weight:700;font-size:.94rem}
+    .toolbar{display:flex;gap:9px;flex-wrap:wrap;justify-content:flex-end}
+    .btn{border:0;border-radius:14px;padding:11px 15px;font-weight:900;color:var(--ink);background:#fff;box-shadow:0 5px 14px rgba(38,44,86,.1);transition:.18s transform,.18s box-shadow;white-space:nowrap}
+    .btn:hover{transform:translateY(-2px);box-shadow:0 9px 20px rgba(38,44,86,.15)}
+    .btn:active{transform:translateY(0) scale(.98)}
+    .btn.primary{color:#fff;background:linear-gradient(135deg,var(--purple),#8d7dfa)}
+    .btn.download{background:#e7fff4;color:#167451}
+    .main-layout{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:20px;align-items:start}
+    .board-shell{position:relative;background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.9);border-radius:30px;padding:14px;box-shadow:var(--shadow);backdrop-filter:blur(10px);overflow:auto;overscroll-behavior-inline:contain}
+    .mobile-hint{display:none;margin:0 0 10px;color:var(--muted);font-size:.86rem;font-weight:800;text-align:center}
+    .board{position:relative;display:grid;grid-template-columns:repeat(11,var(--tile));grid-template-rows:repeat(11,var(--tile));width:calc(var(--tile) * 11);height:calc(var(--tile) * 11);margin:auto;background:
+      linear-gradient(rgba(255,255,255,.56),rgba(255,255,255,.56)),
+      repeating-linear-gradient(45deg,#dff8ed 0 16px,#e9fbf4 16px 32px);border-radius:22px;overflow:hidden;border:4px solid #fff;box-shadow:inset 0 0 0 2px rgba(69,55,153,.1)}
+    .tile{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 4px;text-align:center;border:1px solid rgba(43,51,83,.11);background:linear-gradient(150deg,#fff,#f7f5ff);transition:.16s transform,.16s filter,.16s box-shadow;overflow:hidden}
+    .tile:nth-child(5n+1){background:linear-gradient(150deg,#fff7cf,#fffdf4)}
+    .tile:nth-child(5n+2){background:linear-gradient(150deg,#e2f7ff,#f7fdff)}
+    .tile:nth-child(5n+3){background:linear-gradient(150deg,#ffe4ed,#fff8fa)}
+    .tile:nth-child(5n+4){background:linear-gradient(150deg,#e2faed,#f8fffb)}
+    .tile:nth-child(5n){background:linear-gradient(150deg,#ebe6ff,#fbfaff)}
+    .tile .seat{font-size:clamp(.68rem,.9vw,.83rem);font-weight:900;color:var(--purple-dark);line-height:1}
+    .tile .name{font-size:clamp(.73rem,1vw,.98rem);font-weight:900;line-height:1.15;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+    .tile .score{display:inline-flex;align-items:center;gap:2px;margin-top:2px;padding:2px 6px;border-radius:999px;background:rgba(255,255,255,.86);font-size:clamp(.66rem,.82vw,.8rem);font-weight:900;color:#e74368}
+    .tile.special{color:#fff;border-color:rgba(255,255,255,.5)}
+    .tile.special .event-icon{font-size:clamp(1.5rem,2.4vw,2.35rem);filter:drop-shadow(0 3px 3px rgba(0,0,0,.1))}
+    .tile.special .event-name{font-size:clamp(.75rem,1vw,1rem);font-weight:900;letter-spacing:.08em}
+    .tile.special.chance{background:linear-gradient(145deg,#ff9e57,#ff6f91)}
+    .tile.special.fate{background:linear-gradient(145deg,#6658db,#9c78f2)}
+    .tile.special.teacher{background:linear-gradient(145deg,#30b97e,#65dea6)}
+    .tile.special.principal{background:linear-gradient(145deg,#2d8edc,#5bc9ff)}
+    .tile.active{z-index:5;transform:scale(1.08);filter:saturate(1.25);box-shadow:0 0 0 4px #fff,0 0 0 8px var(--yellow),0 8px 20px rgba(76,55,150,.3);animation:pulse .42s ease-in-out infinite alternate}
+    .tile.selected{z-index:4;box-shadow:inset 0 0 0 4px var(--pink);animation:selectedGlow 1.2s ease-in-out 3}
+    .pawn{position:absolute;right:5px;top:4px;z-index:7;font-size:clamp(1rem,1.8vw,1.55rem);filter:drop-shadow(0 3px 2px rgba(0,0,0,.23));animation:bob .6s ease-in-out infinite alternate;pointer-events:none}
+    .center{grid-column:2/11;grid-row:2/11;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:clamp(12px,3vw,36px);text-align:center;background:
+      radial-gradient(circle at 50% 10%,rgba(255,255,255,.9),transparent 34%),
+      linear-gradient(140deg,rgba(242,248,255,.92),rgba(255,244,248,.94));border:1px solid rgba(255,255,255,.9);overflow:hidden}
+    .center:before,.center:after{content:"";position:absolute;border-radius:50%;filter:blur(2px);opacity:.4;pointer-events:none}
+    .center:before{width:170px;height:170px;background:#c8bfff;left:13%;top:28%}
+    .center:after{width:140px;height:140px;background:#ffe286;right:12%;bottom:24%}
+    .game-card{position:relative;z-index:2;width:min(660px,88%);padding:clamp(18px,3vw,34px);border-radius:30px;background:rgba(255,255,255,.88);border:1px solid #fff;box-shadow:0 18px 50px rgba(61,54,119,.15)}
+    .class-badge{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:999px;background:#efeaff;color:var(--purple-dark);font-weight:900;font-size:clamp(.8rem,1.3vw,1rem)}
+    .game-title{margin:12px 0 4px;font-size:clamp(1.45rem,3vw,2.55rem);font-weight:1000;letter-spacing:.04em}
+    .game-sub{margin:0;color:var(--muted);font-weight:700;font-size:clamp(.82rem,1.3vw,1rem)}
+    .dice-row{display:flex;align-items:center;justify-content:center;gap:clamp(15px,3vw,30px);margin:clamp(15px,3vw,26px) 0}
+    .dice{display:grid;place-items:center;width:clamp(74px,10vw,104px);aspect-ratio:1;border:0;border-radius:24px;background:linear-gradient(145deg,#fff,#e9e7f7);box-shadow:0 13px 0 #d5d1ec,0 18px 25px rgba(50,43,110,.2);font-size:clamp(3rem,6vw,4.9rem);line-height:1;color:var(--purple-dark);transform:rotate(-3deg)}
+    .dice.rolling{animation:roll .13s linear infinite}
+    .roll-btn{border:0;border-radius:21px;padding:17px clamp(22px,3vw,34px);color:#fff;background:linear-gradient(135deg,#ff6f91,#ff9265);box-shadow:0 10px 0 #d95472,0 16px 24px rgba(213,84,114,.25);font-size:clamp(1.05rem,2vw,1.35rem);font-weight:1000;letter-spacing:.06em;transition:.18s}
+    .roll-btn:hover{transform:translateY(-2px)}
+    .roll-btn:active{transform:translateY(6px);box-shadow:0 4px 0 #d95472,0 8px 15px rgba(213,84,114,.22)}
+    .roll-btn:disabled{filter:grayscale(.5);opacity:.58;cursor:not-allowed;transform:none}
+    .result{min-height:94px;display:flex;align-items:center;justify-content:center}
+    .result-box{width:100%;padding:13px 16px;border-radius:18px;background:#f7f8ff;border:1px solid #e7e4ff;animation:pop .36s cubic-bezier(.2,1.4,.4,1)}
+    .result-name{font-size:clamp(1.05rem,2vw,1.35rem);font-weight:1000}
+    .result-note{margin-top:3px;color:var(--muted);font-weight:700;font-size:.9rem}
+    .score-actions{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:10px}
+    .score-btn{border:0;border-radius:12px;padding:9px 16px;font-weight:1000;box-shadow:0 5px 12px rgba(52,47,96,.12)}
+    .score-btn.plus{background:#e5fff1;color:#168357}.score-btn.minus{background:#ffe8ee;color:#bf3556}
+    .side-panel{display:flex;flex-direction:column;gap:14px}
+    .panel{background:rgba(255,255,255,.85);border:1px solid rgba(255,255,255,.95);border-radius:22px;padding:17px;box-shadow:var(--shadow);backdrop-filter:blur(10px)}
+    .panel h2{font-size:1.05rem;margin:0 0 12px;font-weight:1000}
+    .legend{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .legend-item{display:flex;align-items:center;gap:7px;padding:8px;border-radius:12px;background:#f7f7fc;font-weight:800;font-size:.86rem}
+    .history{display:flex;flex-direction:column;gap:8px;max-height:330px;overflow:auto}
+    .history-empty{color:var(--muted);font-size:.9rem;line-height:1.5}
+    .history-item{display:flex;gap:9px;align-items:flex-start;padding:9px;border-radius:12px;background:#f7f7fc;font-size:.84rem;line-height:1.35}
+    .history-num{display:grid;place-items:center;min-width:25px;height:25px;border-radius:8px;background:#ece8ff;color:var(--purple-dark);font-weight:900}
+    .stat-row{display:flex;align-items:center;justify-content:space-between;margin-top:10px;color:var(--muted);font-size:.86rem;font-weight:800}
+    .modal-backdrop{position:fixed;inset:0;z-index:100;display:none;place-items:center;padding:18px;background:rgba(29,29,54,.48);backdrop-filter:blur(7px)}
+    .modal-backdrop.open{display:grid}
+    .modal{width:min(680px,100%);max-height:92vh;overflow:auto;border-radius:26px;background:#fff;padding:clamp(20px,4vw,32px);box-shadow:0 28px 90px rgba(21,18,52,.32);animation:pop .28s ease-out}
+    .modal-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:18px}
+    .modal h2{margin:0;font-size:1.45rem}
+    .icon-btn{display:grid;place-items:center;width:42px;height:42px;border:0;border-radius:13px;background:#f1f0f8;font-size:1.25rem}
+    .field{display:block;margin:15px 0}.field-label{display:block;margin-bottom:7px;font-weight:900}
+    input,textarea{width:100%;border:2px solid #e6e4f2;border-radius:14px;padding:12px 14px;color:var(--ink);background:#fbfbfe;outline:0;transition:border-color .15s,box-shadow .15s}
+    input:focus,textarea:focus{border-color:#8a79ee;box-shadow:0 0 0 4px rgba(104,87,229,.12)}
+    textarea{min-height:260px;resize:vertical;line-height:1.55}
+    .toggle-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px;border-radius:15px;background:#f7f6fd}
+    .toggle-copy strong{display:block}.toggle-copy small{display:block;color:var(--muted);margin-top:3px}
+    .switch{position:relative;width:54px;height:31px;flex:0 0 auto}.switch input{opacity:0;width:0;height:0}
+    .slider{position:absolute;inset:0;border-radius:999px;background:#c8c9d1;transition:.2s}.slider:before{content:"";position:absolute;width:23px;height:23px;left:4px;top:4px;border-radius:50%;background:#fff;box-shadow:0 2px 7px rgba(0,0,0,.23);transition:.2s}
+    .switch input:checked+.slider{background:var(--purple)}.switch input:checked+.slider:before{transform:translateX(23px)}
+    .settings-note{color:var(--muted);font-size:.84rem;line-height:1.5;margin:7px 0}
+    .modal-actions{display:flex;justify-content:flex-end;gap:9px;flex-wrap:wrap;margin-top:19px}
+    .toast{position:fixed;left:50%;bottom:25px;z-index:200;transform:translate(-50%,30px);opacity:0;pointer-events:none;padding:12px 18px;border-radius:14px;background:#26304a;color:#fff;font-weight:900;box-shadow:0 12px 28px rgba(20,24,45,.25);transition:.28s}
+    .toast.show{opacity:1;transform:translate(-50%,0)}
+    .confetti{position:fixed;z-index:150;width:10px;height:16px;border-radius:3px;pointer-events:none;animation:confetti 1.4s ease-in forwards}
+    @keyframes roll{to{transform:rotate(357deg) scale(.94)}}
+    @keyframes pulse{to{transform:scale(1.13);filter:brightness(1.08) saturate(1.3)}}
+    @keyframes selectedGlow{50%{filter:brightness(1.08);transform:scale(1.04)}}
+    @keyframes bob{to{transform:translateY(-4px) rotate(5deg)}}
+    @keyframes pop{from{opacity:0;transform:scale(.92) translateY(8px)}}
+    @keyframes confetti{to{transform:translate(var(--dx),105vh) rotate(720deg);opacity:.2}}
+    @media(max-width:1080px){.main-layout{grid-template-columns:1fr}.side-panel{display:grid;grid-template-columns:1fr 1fr}.board-shell{padding:12px}.mobile-hint{display:block}}
+    @media(max-width:700px){.app{padding:12px 10px 30px}.topbar{align-items:flex-start}.brand-icon{width:44px;height:44px;border-radius:14px;font-size:24px}.subtitle{font-size:.8rem}.toolbar .btn.download{display:none}.btn{padding:10px 12px}.board-shell{border-radius:22px}.side-panel{grid-template-columns:1fr}.game-card{width:90%;padding:17px 13px}.center{padding:8px}.dice-row{margin:13px 0}.result{min-height:82px}.legend{grid-template-columns:repeat(4,1fr)}.legend-item{flex-direction:column;text-align:center;font-size:.75rem}}
+    @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}}
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">🎲</div>
+        <div><h1>班級大富翁抽籤系統</h1><p class="subtitle">擲出驚喜，讓每一次點名都充滿期待！</p></div>
+      </div>
+      <nav class="toolbar" aria-label="工具列">
+        <button class="btn download" id="downloadBtn">⬇ 下載分數</button>
+        <button class="btn primary" id="settingsBtn">⚙ 設定</button>
+      </nav>
+    </header>
+
+    <div class="main-layout">
+      <section class="board-shell" aria-label="大富翁抽籤棋盤">
+        <p class="mobile-hint">↔ 棋盤可左右滑動查看，按下中央按鈕即可擲骰</p>
+        <div class="board" id="board">
+          <section class="center">
+            <div class="game-card">
+              <div class="class-badge">🏫 <span id="classBadge">我的班級</span></div>
+              <div class="game-title">今天抽到誰？</div>
+              <p class="game-sub">沿著棋盤前進，遇見今天的幸運星</p>
+              <div class="dice-row">
+                <button class="dice" id="dice" aria-label="骰子，目前點數 1">⚀</button>
+                <button class="roll-btn" id="rollBtn">擲骰抽籤</button>
+              </div>
+              <div class="result" id="result" aria-live="polite">
+                <div class="result-box"><div class="result-name">準備好了嗎？ ✨</div><div class="result-note">按下「擲骰抽籤」開始遊戲</div></div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <aside class="side-panel">
+        <section class="panel">
+          <h2>🎁 特殊格說明</h2>
+          <div class="legend">
+            <div class="legend-item"><span>🎉</span><span>機會</span></div>
+            <div class="legend-item"><span>🔮</span><span>命運</span></div>
+            <div class="legend-item"><span>👩‍🏫</span><span>導師</span></div>
+            <div class="legend-item"><span>🏫</span><span>校長</span></div>
+          </div>
+          <div class="stat-row"><span>班級人數</span><strong id="studentCount">35 人</strong></div>
+          <div class="stat-row"><span>本次位置</span><strong id="positionText">起點</strong></div>
+        </section>
+        <section class="panel">
+          <h2>📜 最近抽籤</h2>
+          <div class="history" id="history"><div class="history-empty">尚無紀錄。每次擲骰結果會顯示在這裡。</div></div>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <div class="modal-backdrop" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="modal">
+      <div class="modal-head"><h2 id="settingsTitle">⚙ 班級設定</h2><button class="icon-btn" id="closeSettings" aria-label="關閉設定">✕</button></div>
+      <label class="field"><span class="field-label">班級名稱</span><input id="classInput" maxlength="30" placeholder="例如：高一忠班" /></label>
+      <label class="field"><span class="field-label">學生名單</span><textarea id="rosterInput" spellcheck="false" placeholder="每行一位，例如：&#10;1 王小明&#10;2 李小華"></textarea></label>
+      <p class="settings-note">每行輸入「座號 姓名」，最多 36 位。若少於 36 位，空出的格子會自動變成「機會」或「命運」。</p>
+      <div class="toggle-row">
+        <div class="toggle-copy"><strong>姓名隱私遮罩（○）</strong><small>開啟後，畫面與下載清單會遮住姓名第二個字</small></div>
+        <label class="switch"><input id="privacyToggle" type="checkbox" /><span class="slider"></span></label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" id="resetBtn">恢復預設</button>
+        <button class="btn download" id="modalDownloadBtn">⬇ 下載分數</button>
+        <button class="btn primary" id="saveSettings">儲存並套用</button>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status"></div>
+
+  <script>
+    (() => {
+      'use strict';
+      const DEFAULT_STUDENTS = [
+        '1 王○晴','2 王○萱','3 任○珍','4 呂○潼','5 宋○昀','6 施○瑄','7 洪○綺','8 孫○涵','9 徐○柔',
+        '10 張○妮','11 許○慈','12 陳○瑄','13 陳○彤','14 黄○雅','15 傅○綺','16 曾○晴','17 曾○彤','18 温○芮',
+        '19 黃○晴','20 黃○琳','21 楊○潔','22 詹○瑊','23 潘○辰','24 鄧○予','25 鄭○沁','26 戴○鋡','27 鍾○霓',
+        '28 王○騰','29 林○緯','30 范○丞','31 莊○瀚','32 陳○元','33 黃○豪','34 詹○嘉','35 劉○佳'
+      ].map(parseStudentLine).filter(Boolean);
+      const DICE = ['⚀','⚁','⚂','⚃','⚄','⚅'];
+      const STORAGE_KEY = 'classMonopolyDraw-v1';
+      const cornerSpecials = {
+        0:{type:'chance',icon:'🎉',name:'機會'},
+        10:{type:'fate',icon:'🔮',name:'命運'},
+        20:{type:'teacher',icon:'👩‍🏫',name:'導師'},
+        30:{type:'principal',icon:'🏫',name:'校長'}
+      };
+      const eventMessages = {
+        chance:['勇敢分享獎：幸運星獲得 +2 ❤️','熱心服務獎：幸運星獲得 +1 ❤️','笑容感染力：幸運星獲得 +2 ❤️'],
+        fate:['今日好運爆棚：幸運星獲得 +3 ❤️','神秘任務完成：幸運星獲得 +2 ❤️','同學助攻：幸運星獲得 +1 ❤️'],
+        teacher:['導師的鼓勵：認真學習，幸運星 +2 ❤️','導師點讚：課堂表現優良，幸運星 +2 ❤️'],
+        principal:['校長特別獎：幸運星獲得 +3 ❤️','校長嘉勉：展現校園好品格，幸運星 +3 ❤️']
+      };
+
+      let state = loadState();
+      let boardItems = [];
+      let rolling = false;
+      let audioCtx = null;
+      let toastTimer = null;
+
+      const $ = id => document.getElementById(id);
+      const board = $('board'), result = $('result'), dice = $('dice'), rollBtn = $('rollBtn');
+
+      function parseStudentLine(line, index=0){
+        const cleaned = String(line||'').trim();
+        if(!cleaned) return null;
+        const match = cleaned.match(/^(\d+)\s*[、.．:：\-]?\s*(.+)$/);
+        const seat = match ? Number(match[1]) : index + 1;
+        const name = (match ? match[2] : cleaned).trim();
+        return name ? {id:`seat-${seat}`,seat,name,score:0} : null;
+      }
+
+      function loadState(){
+        const fallback = {className:'我的班級',students:DEFAULT_STUDENTS,privacy:true,position:0,history:[]};
+        try{
+          const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+          if(!saved || !Array.isArray(saved.students)) return fallback;
+          return {...fallback,...saved,students:saved.students.slice(0,36).map((s,i)=>({...s,id:s.id||`seat-${s.seat||i+1}`,score:Number(s.score)||0}))};
+        }catch{return fallback}
+      }
+      function saveState(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}
+
+      function displayName(name){
+        if(!state.privacy) return name;
+        const chars=[...name];
+        if(chars.length>=2 && chars[1] !== '○') chars[1]='○';
+        return chars.join('');
+      }
+
+      function gridPosition(index){
+        if(index<=10) return {row:1,col:index+1};
+        if(index<=20) return {row:index-9,col:11};
+        if(index<=30) return {row:11,col:31-index};
+        return {row:41-index,col:1};
+      }
+
+      function buildItems(){
+        let studentIndex=0, fillerIndex=0;
+        boardItems=Array.from({length:40},(_,i)=>{
+          if(cornerSpecials[i]) return {...cornerSpecials[i],kind:'special',index:i};
+          const student=state.students[studentIndex++];
+          if(student) return {kind:'student',student,index:i};
+          const isChance=fillerIndex++%2===0;
+          return {kind:'special',type:isChance?'chance':'fate',icon:isChance?'🎉':'🔮',name:isChance?'機會':'命運',index:i,filler:true};
+        });
+      }
+
+      function renderBoard(){
+        buildItems();
+        board.querySelectorAll('.tile').forEach(el=>el.remove());
+        boardItems.forEach(item=>{
+          const pos=gridPosition(item.index);
+          const tile=document.createElement('div');
+          tile.className=`tile ${item.kind==='special'?`special ${item.type}`:''}`;
+          tile.dataset.index=item.index;
+          tile.style.gridRow=pos.row;tile.style.gridColumn=pos.col;
+          if(item.kind==='student'){
+            tile.innerHTML=`<span class="seat">${item.student.seat} 號</span><span class="name" title="${escapeHtml(displayName(item.student.name))}">${escapeHtml(displayName(item.student.name))}</span><span class="score">❤️ ${item.student.score}</span>`;
+          }else{
+            tile.innerHTML=`<span class="event-icon">${item.icon}</span><span class="event-name">${item.name}</span>`;
+          }
+          if(item.index===state.position){
+            const pawn=document.createElement('span');pawn.className='pawn';pawn.textContent='🚀';pawn.setAttribute('aria-hidden','true');tile.appendChild(pawn);
+          }
+          board.appendChild(tile);
+        });
+        $('classBadge').textContent=state.className;
+        $('studentCount').textContent=`${state.students.length} 人`;
+        $('positionText').textContent=state.position===0?'起點':`第 ${state.position} 格`;
+        renderHistory();
+      }
+
+      function renderHistory(){
+        const wrap=$('history');
+        if(!state.history.length){wrap.innerHTML='<div class="history-empty">尚無紀錄。每次擲骰結果會顯示在這裡。</div>';return}
+        wrap.innerHTML=state.history.slice(0,8).map((h,i)=>`<div class="history-item"><span class="history-num">${i+1}</span><span>${escapeHtml(h)}</span></div>`).join('');
+      }
+
+      function escapeHtml(value){return String(value).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+      const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+
+      function ensureAudio(){
+        if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+        if(audioCtx.state==='suspended') audioCtx.resume();
+      }
+      function tone(freq=440,duration=.08,type='sine',volume=.05,when=0){
+        try{
+          ensureAudio();const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();
+          osc.type=type;osc.frequency.value=freq;gain.gain.setValueAtTime(volume,audioCtx.currentTime+when);
+          gain.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+when+duration);
+          osc.connect(gain).connect(audioCtx.destination);osc.start(audioCtx.currentTime+when);osc.stop(audioCtx.currentTime+when+duration);
+        }catch{}
+      }
+      function soundRoll(){[190,260,330,420].forEach((f,i)=>tone(f,.08,'square',.025,i*.055))}
+      function soundStep(step){tone(350+step*24,.07,'sine',.045)}
+      function soundWin(){[523,659,784,1047].forEach((f,i)=>tone(f,.22,'triangle',.07,i*.1))}
+
+      async function roll(){
+        if(rolling) return; rolling=true;rollBtn.disabled=true;dice.classList.add('rolling');
+        soundRoll();
+        const steps=1+Math.floor(Math.random()*6);
+        for(let i=0;i<12;i++){const face=Math.floor(Math.random()*6);dice.textContent=DICE[face];await delay(55)}
+        dice.textContent=DICE[steps-1];dice.setAttribute('aria-label',`骰子，點數 ${steps}`);dice.classList.remove('rolling');
+        for(let step=1;step<=steps;step++){
+          document.querySelectorAll('.tile.active').forEach(el=>el.classList.remove('active'));
+          state.position=(state.position+1)%40;renderPawnOnly();
+          const tile=document.querySelector(`.tile[data-index="${state.position}"]`);tile?.classList.add('active');soundStep(step);await delay(280);
+        }
+        document.querySelectorAll('.tile.active').forEach(el=>el.classList.remove('active'));
+        await resolveLanding(steps);saveState();rolling=false;rollBtn.disabled=false;
+      }
+
+      function renderPawnOnly(){
+        document.querySelectorAll('.pawn').forEach(p=>p.remove());
+        const tile=document.querySelector(`.tile[data-index="${state.position}"]`);
+        if(tile){const pawn=document.createElement('span');pawn.className='pawn';pawn.textContent='🚀';tile.appendChild(pawn)}
+        $('positionText').textContent=state.position===0?'起點':`第 ${state.position} 格`;
+      }
+
+      async function resolveLanding(steps){
+        const item=boardItems[state.position];
+        const tile=document.querySelector(`.tile[data-index="${state.position}"]`);tile?.classList.add('selected');
+        if(item.kind==='student'){
+          const student=item.student;
+          result.innerHTML=`<div class="result-box"><div class="result-name">🎯 ${student.seat} 號 ${escapeHtml(displayName(student.name))}</div><div class="result-note">擲出 ${steps} 點，請為這位同學加分或減分</div><div class="score-actions"><button class="score-btn plus" data-score="1">+1 ❤️</button><button class="score-btn minus" data-score="-1">−1 ❤️</button></div></div>`;
+          result.querySelectorAll('[data-score]').forEach(btn=>btn.addEventListener('click',()=>adjustScore(student.id,Number(btn.dataset.score))));
+          state.history.unshift(`🎯 ${student.seat} 號 ${displayName(student.name)}（擲出 ${steps}）`);
+          soundWin();confetti(26);
+        }else{
+          const candidates=state.students;
+          const lucky=candidates[Math.floor(Math.random()*candidates.length)];
+          const messages=eventMessages[item.type];
+          const message=messages[Math.floor(Math.random()*messages.length)];
+          const bonus=Number((message.match(/\+(\d+)/)||[])[1]||1);
+          if(lucky) lucky.score+=bonus;
+          const luckyText=lucky?`${lucky.seat} 號 ${displayName(lucky.name)}`:'全班';
+          result.innerHTML=`<div class="result-box"><div class="result-name">${item.icon} ${item.name}事件</div><div class="result-note">${escapeHtml(message)}<br><strong>${escapeHtml(luckyText)}</strong></div>${lucky?`<div class="score-actions"><button class="score-btn plus" data-score="1">再 +1 ❤️</button><button class="score-btn minus" data-score="-1">調整 −1 ❤️</button></div>`:''}</div>`;
+          if(lucky) result.querySelectorAll('[data-score]').forEach(btn=>btn.addEventListener('click',()=>adjustScore(lucky.id,Number(btn.dataset.score))));
+          state.history.unshift(`${item.icon} ${item.name}：${luckyText} +${bonus} ❤️`);
+          soundWin();confetti(52);renderBoard();
+        }
+        state.history=state.history.slice(0,30);renderHistory();
+        setTimeout(()=>tile?.classList.remove('selected'),3000);
+      }
+
+      function adjustScore(studentId,delta){
+        const student=state.students.find(s=>s.id===studentId);if(!student)return;
+        student.score+=delta;saveState();renderBoard();soundWin();showToast(`${displayName(student.name)} ${delta>0?'+1':'−1'} ❤️，目前 ${student.score} 分`);
+        const box=result.querySelector('.result-box');if(box){const note=box.querySelector('.result-note');if(note)note.innerHTML=`已調整分數，目前共 <strong>${student.score} ❤️</strong>`}
+      }
+
+      function confetti(count){
+        const colors=['#ff6f91','#ffd95a','#57c7ff','#59d69a','#8d7dfa','#ff9e57'];
+        for(let i=0;i<count;i++){
+          const el=document.createElement('i');el.className='confetti';el.style.left=`${Math.random()*100}vw`;el.style.top=`${-20-Math.random()*80}px`;el.style.background=colors[i%colors.length];el.style.setProperty('--dx',`${(Math.random()-.5)*240}px`);el.style.animationDelay=`${Math.random()*.25}s`;document.body.appendChild(el);setTimeout(()=>el.remove(),1800);
+        }
+      }
+
+      function showToast(message){
+        const el=$('toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2200);
+      }
+
+      function openSettings(){
+        $('classInput').value=state.className;
+        $('rosterInput').value=state.students.map(s=>`${s.seat} ${s.name}`).join('\n');
+        $('privacyToggle').checked=state.privacy;
+        $('settingsModal').classList.add('open');setTimeout(()=>$('classInput').focus(),50);
+      }
+      function closeSettings(){$('settingsModal').classList.remove('open')}
+
+      function saveSettings(){
+        const lines=$('rosterInput').value.split(/\r?\n/).filter(v=>v.trim());
+        const parsed=lines.slice(0,36).map(parseStudentLine).filter(Boolean);
+        if(!parsed.length){showToast('請至少輸入一位學生');return}
+        const oldScores=new Map(state.students.map(s=>[`${s.seat}|${s.name}`,s.score]));
+        const used=new Set();
+        parsed.forEach((s,i)=>{if(used.has(s.seat))s.seat=i+1;used.add(s.seat);s.id=`seat-${s.seat}-${i}`;s.score=oldScores.get(`${s.seat}|${s.name}`)||0});
+        state.className=$('classInput').value.trim()||'我的班級';state.students=parsed;state.privacy=$('privacyToggle').checked;state.position=0;state.history=[];
+        saveState();renderBoard();closeSettings();showToast(`已套用 ${parsed.length} 位學生`);
+      }
+
+      function resetDefaults(){
+        if(!confirm('確定要恢復預設班級與名單嗎？目前分數也會歸零。'))return;
+        state={className:'我的班級',students:DEFAULT_STUDENTS.map(s=>({...s})),privacy:true,position:0,history:[]};saveState();renderBoard();openSettings();showToast('已恢復預設資料');
+      }
+
+      function downloadScores(){
+        const now=new Date();
+        const lines=[`${state.className}｜學生分數清單`,`匯出時間：${now.toLocaleString('zh-TW')}`,'','座號\t姓名\t分數',...state.students.slice().sort((a,b)=>a.seat-b.seat).map(s=>`${s.seat}\t${displayName(s.name)}\t${s.score}`),'',`班級人數：${state.students.length} 人`,`總分：${state.students.reduce((n,s)=>n+s.score,0)} 分`];
+        const blob=new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`${state.className}_學生分數_${now.toISOString().slice(0,10)}.txt`;a.click();setTimeout(()=>URL.revokeObjectURL(url),800);showToast('分數清單已下載');
+      }
+
+      rollBtn.addEventListener('click',roll);dice.addEventListener('click',roll);
+      $('settingsBtn').addEventListener('click',openSettings);$('closeSettings').addEventListener('click',closeSettings);$('saveSettings').addEventListener('click',saveSettings);$('resetBtn').addEventListener('click',resetDefaults);
+      $('downloadBtn').addEventListener('click',downloadScores);$('modalDownloadBtn').addEventListener('click',downloadScores);
+      $('settingsModal').addEventListener('click',e=>{if(e.target===$('settingsModal'))closeSettings()});
+      document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSettings();if(e.code==='Space'&&!$('settingsModal').classList.contains('open')){e.preventDefault();roll()}});
+      renderBoard();
+    })();
+  </script>
+</body>
+</html>
